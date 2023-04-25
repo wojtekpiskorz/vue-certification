@@ -1,14 +1,19 @@
 <script setup>
 import { items } from "./movies.json";
 import { StarIcon } from "@heroicons/vue/24/solid";
-/*
- This is an Icon that you can use to represent the stars if you like
- otherwise you could just use a simple ⭐️ emoji, or * character.
-*/
-// - The application uses Vue.js template syntax to display the movies.
-// - The movies are rendered using a `v-for` loop.
-// - The name, description, genres and image of each movie is displayed.
-// - The rating of the movie is represented by stars, with a maximum of 5 stars.
+import { reactive } from "vue";
+
+const movies = reactive(items);
+
+
+// - There are 5 buttons from 1 to 5 representing the rating on for each movie.
+// - Clicking on a button updates the rating of that movie.
+// - The button for the rating number is disabled if that rating is the current one of the movie.
+
+
+const setRatingTo = (rating, movie) => {
+  movie.rating = rating;
+};
 
 </script>
 
@@ -16,9 +21,10 @@ import { StarIcon } from "@heroicons/vue/24/solid";
   <!-- This is where your template goes	-->
   <ul class="max-w-4xl mx-auto grid xl:grid-cols-3 gap-10 mt-20 justify-items-start">
     <li
-      v-for="item in items"
+      v-for="(item, index) in movies"
       :key="item.id"
       class="card text-gray-800 flex flex-col rounded-md overflow-hidden bg-white h-auto"
+      :class="`card--${index + 1}`"
     >
       <div class="card__content px-4 py-6 flex flex-col gap-4">
         <div class="card__meta flex flex-col gap-2">
@@ -38,15 +44,20 @@ import { StarIcon } from "@heroicons/vue/24/solid";
             v-if="item.rating"
             class="card__rating-wrapper flex flex-wrap gap-1"
           >
-            <StarIcon
-              v-for="star in 5"
+            <button
+              v-for="(star, index) in 5"
               :key="star"
-              class="card__rating-star h-5 w-5"
-              :class="{
-                  'text-yellow-500': star <= item.rating,
-                  'text-gray-600': star > item.rating,
-                }"
-            />
+              @click.prevent="setRatingTo(index + 1, item)"
+              :disabled="item.rating === index + 1"
+              class="disabled:cursor-not-allowed "
+            >
+              <StarIcon
+                class="card__rating-star h-5 w-5 text-gray-600"
+                :class="{
+                    'text-yellow-500': index < item.rating,
+                  }"
+              />
+            </button>
           </ul>
         </div>
         <div class="card__info flex flex-col gap-2">
