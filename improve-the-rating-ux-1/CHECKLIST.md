@@ -1,0 +1,4 @@
+- The rating of each movie should starts with a `null` value.
+- The computed property named `computedMovies` returns the `movies`, adding a `notRated` value to each movie if it was rated or not.
+- Based on the `notRated` value property the text color of the `#rating` element changes from `text-yellow-500` if `true`, to`text-gray-500` if `false`.
+- The `#rating-stars` element only shows if the movie was rated.
