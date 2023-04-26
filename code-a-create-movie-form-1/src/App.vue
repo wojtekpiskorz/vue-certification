@@ -1,13 +1,33 @@
 <script setup>
-import { ref, reactive, watch } from "vue";
+import { ref, reactive, watch, computed } from "vue";
 import { StarIcon } from "@heroicons/vue/24/solid";
 import { items } from "./movies.json";
 const movies = ref(items);
 
 
+const moviesAmount = computed(() => movies.value.length);
+
+// Set rating functionality
+
 function updateRating(movieIndex, rating) {
   movies.value[movieIndex].rating = rating;
 }
+
+function resetRating() {
+  movies.value.forEach((movie) => (movie.rating = 0));
+}
+
+const averageRating = computed(() => {
+  const totalRating = movies.value.reduce(
+    (total, movie) => total + movie.rating,
+    0
+  );
+  return (totalRating / movies.value.length).toFixed(1);
+});
+
+// form 
+
+const showForm = ref(false);
 
 const movieForm = reactive({
   name: "",
@@ -26,6 +46,8 @@ const movieGenres = reactive([
   { label: "Thriller", value: "thriller" },
 ])
 
+// Form validation and errors handling
+
 const errors = reactive({
   name: null,
   genres: null,
@@ -36,16 +58,28 @@ const errors = reactive({
 
 const formIsValid = ref(false);
 
-const showForm = ref(false);
-
-function addMovie() {
-  if (!formIsValid) return
-  const newMovie = {
-    id: Number(new Date()) + movieForm.name,
-    ...movieForm,
-  };
-  movies.value.push(newMovie);
+function validateForm() {
+  errors.name = !movieForm.name ? "Name is required" : null;
+  errors.genres = !movieForm.genres.length ? "Genres is required" : null;
+  formIsValid.value = !Object.values(errors).some((error) => error);
 }
+
+// watch([movieForm.name, movieForm.description, movieForm.image], () => {
+//   if (movieForm.name) errors.name = null;
+//   if (movieForm.description) errors.description = null;
+//   if (movieForm.image) errors.image = null;
+// });
+
+// watch(movieForm.genres, () => {
+//   if (movieForm.genres.length) errors.genres = null;
+// });
+
+// watch(movieForm.inTheaters, () => {
+//   if (movieForm.inTheaters) errors.inTheaters = null;
+// });
+
+
+// Form actions
 
 function clearForm() {
   movieForm.name = "";
@@ -59,12 +93,7 @@ function clearForm() {
   errors.image = null;
   errors.inTheaters = null;
   showForm.value = false;
-}
-
-function validateForm() {
-  errors.name = !movieForm.name ? "Name is required" : null;
-  errors.genres = !movieForm.genres.length ? "Genres is required" : null;
-  formIsValid.value = !Object.values(errors).some((error) => error);
+  isMovieEditing.value = false;
 }
 
 function cancelForm() {
@@ -72,30 +101,72 @@ function cancelForm() {
 }
 
 function submitForm() {
-  console.log("submitForm");
   validateForm();
-  console.log("errors", errors);
-  console.log("formIsValid", formIsValid.value);
-  if (formIsValid.value) {
+  if (!formIsValid.value) return
+  if (isMovieEditing.value) {
+    updateMovie();
+  } else {
     addMovie();
-    clearForm();
   }
+  clearForm();
 }
 
-// watch for changes in all the inputs  and if it's not empty, set given to null
-watch([movieForm.name, movieForm.description, movieForm.image], () => {
-  if (movieForm.name) errors.name = null;
-  if (movieForm.description) errors.description = null;
-  if (movieForm.image) errors.image = null;
-});
+// add movie
 
-watch(movieForm.genres, () => {
-  if (movieForm.genres.length) errors.genres = null;
-});
+function addMovie() {
+  if (!formIsValid) return
+  const newMovie = {
+    id: Number(new Date()) + movieForm.name,
+    ...movieForm,
+  };
+  movies.value.push(newMovie);
+}
 
-watch(movieForm.inTheaters, () => {
-  if (movieForm.inTheaters) errors.inTheaters = null;
-});
+
+// edit movie
+
+const isMovieEditing = ref(false);
+
+function editMovie(movie) {
+  isMovieEditing.value = true;
+  movieForm.name = movie.name;
+  movieForm.description = movie.description;
+  movieForm.image = movie.image;
+  movieForm.genres = movie.genres;
+  movieForm.inTheaters = movie.inTheaters;
+  movieForm.id = movie.id;
+  showForm.value = true;
+  console.log(movieForm);
+}
+
+function updateMovie() {
+  if (!formIsValid.value) return
+
+  const movie = movies.value.find(
+    (movie) => movie.id === movieForm.id
+  );
+  const updatedMovie = {
+    ...movie,
+    ...movieForm,
+  };
+
+  movie.name = updatedMovie.name;
+  movie.description = updatedMovie.description;
+  movie.image = updatedMovie.image;
+  movie.genres = updatedMovie.genres;
+  movie.inTheaters = updatedMovie.inTheaters;
+  if (!movie.id) movie.id = Number(new Date()) + movie.name;
+
+}
+
+// delete movie
+
+function deleteMovie(movie) {
+  const selectedMovie = movies.value.findIndex(
+    (movieItem) => movieItem.id === movie.id
+  );
+  movies.value.splice(selectedMovie, 1);
+}
 
 
 
@@ -103,13 +174,28 @@ watch(movieForm.inTheaters, () => {
 </script>
 
 <template>
-  <div class="app">
+  <div class="app flex flex-col gap-12">
+    <!-- Header  -->
+    <header class=" text-white py-4 px-8 flex justify-between items-center max-w-4xl w-full">
+      <h1 class="text-2xl font-bold">Movies</h1>
+      <div class="flex gap-8 items-center">
+        <Button
+          class="border border-white border-solid py-3 px-6 rounded-md hover:bg-white hover:text-black"
+          @click="resetRating"
+        >Reset Rating
+        </Button>
+        <span class="">Average Rating: <strong>{{ averageRating }}</strong></span>
+        <span class="">Number or movies: <strong>{{ moviesAmount }}</strong></span>
+      </div>
+    </header>
+    <!-- Add a movie button -->
     <div
       @click="showForm = true"
       class="fixed flex items-center justify-center bottom-4 right-4 w-16 h-16 rounded-full bg-sky-600 text-white font-bold text-4xl line-height-0 cursor-pointer"
     >
       +
     </div>
+    <!-- Form  -->
     <div
       v-show="showForm"
       class="fixed w-full z-10 h-screen flex justify-center items-center bg-gray-900 bg-opacity-40 text-white"
@@ -206,6 +292,7 @@ watch(movieForm.inTheaters, () => {
         {{ movieForm }}
       </div>
     </div>
+    <!-- Movie list -->
     <div class="movie-list">
       <div
         class="movie-item"
@@ -274,6 +361,23 @@ watch(movieForm.inTheaters, () => {
                 @click="updateRating(movieIndex, star)"
               >
                 <StarIcon class="movie-item-star-icon" />
+              </button>
+            </div>
+            <!-- buttons  -->
+            <div class="flex gap-2 flex-wrap">
+              <!-- edit button -->
+              <button
+                class="movie-item-edit-button px-2 hover:bg-gray-200  border border-gray-500 border-solid rounded-lg"
+                @click="editMovie(movie)"
+              >
+                Edit
+              </button>
+              <!-- delete button -->
+              <button
+                class="movie-item-edit-button px-2 hover:bg-gray-200 border border-gray-500 border-solid rounded-lg"
+                @click="deleteMovie(movie)"
+              >
+                Delete
               </button>
             </div>
           </div>
